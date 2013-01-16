@@ -96,7 +96,13 @@ class Parser
 	 */
 	protected function isSuccessBuild($content)
 	{
-		return !json_decode($content)->failCount; 
+		$content = json_decode($content);
+		if (isset($content->failCount) && $content->failCount == 0)
+		{
+			return true;
+		}
+		
+		return false;		
 	}
 	
 	/**

@@ -70,14 +70,14 @@ class Parser
 		{
 			$result = $this->getJenkinsContent(sprintf(static::URL_PATTERN, $jobName));
 			
-			if (empty($result))
+			if (empty($result) || $this->isBuildStatusDefined($result))
 			{
 				// connetcion problems or stuff like that
 				$this->turnOnYellow();
 				return;
 			}
 			
-			if (!$this->isSuccessBuild($result))
+			if ($this->isSuccessBuild($result) === false)
 			{
 				// one of the builds is failed
 				$this->turnOnRed();
@@ -92,18 +92,24 @@ class Parser
 	 * Build successfull only if there are no fails in tests.
 	 * 
 	 * @param string $content
-	 * @return boolean
+	 * @return bool
 	 */
 	protected function isSuccessBuild($content)
 	{
-		$content = json_decode($content);
-		if (isset($content->failCount) && $content->failCount == 0)
-		{
-			return true;
-		}
-		
-		return false;		
+		return !json_decode($content)->failCount;
 	}
+	
+	/**
+	 * Checks if build status is defined.
+	 * 
+	 * @param string $content
+	 * @return bool 
+	 */
+	protected function isBuildStatusDefined($content)
+	{
+		return isset(json_decode($content)->failCount);
+	}
+		
 	
 	/**
 	 * @param string $url

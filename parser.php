@@ -141,7 +141,7 @@ class Parser
 	{
 		echo "\r\n	Green is on \r\n";
 		
-		passthru("sudo ./lights/green/on");
+		passthru("sudo /home/epam/www/tllocal/lights/green/on");
 	}
 	
 	/**
@@ -153,7 +153,7 @@ class Parser
 		
 		// this is not mistake, we turning off yellow when we need it shine.
 		// it's feature of connetcing yellow
-		passthru("sudo ./lights/yellow/off");
+		passthru("sudo /home/epam/www/tllocal/lights/yellow/off");
 	}
 	
 	/**
@@ -163,6 +163,6 @@ class Parser
 	{
 		echo "\r\n	Red is on \r\n";
 		
-		passthru("sudo ./lights/red/on");
+		passthru("sudo /home/epam/www/tllocal/lights/red/on");
 	}
 }

@@ -2,7 +2,7 @@
 
 $config = parse_ini_file('config.ini');
 
-$parser = new Parser($config['jobs'], $config['jenkinsUser'], $config['jenkinsApiToken']);
+$parser = new Parser($config['jenkins_source'], $config['jenkinsUser'], $config['jenkinsApiToken']);
 $parser->run();
 
 /**
@@ -14,7 +14,11 @@ class Parser
 	/**
 	 * @var string
 	 */
-	const URL_PATTERN = "http://hudson.mtvi.com/hudson/job/%s/lastCompletedBuild/testReport/api/json";
+	protected $jenkinsSource;
+	
+	protected $jenkinsUser;
+	
+	protected $jenkinsApiToken;
 	
 	/**
 	 * Timeout in seconds
@@ -24,32 +28,34 @@ class Parser
 	const TIMEOUT = 10;
 	
 	/**
-	 * Login.
-	 *
-	 * @var string
+	 * @param array $jenkinsSource
 	 */
-	protected $jenkinsUser;
-	
-	/**
-	 * This on is specific for each user.
-	 *
-	 * @var string
-	 */
-	protected $jenkinsApiToken;
-	
-	/**
-	 * @var array
-	 */
-	protected $jobs = array();
-	
-	/**
-	 * @param array $jenkinsJobNames
-	 */
-	public function __construct(array $jenkinsJobNames, $jenkinsUser, $jenkinsApiToken)
+	public function __construct($jenkinsSource, $jenkinsUser, $jenkinsApiToken)
 	{
-		$this->jobs = $jenkinsJobNames;
+		$this->jenkinsSource = $jenkinsSource;
 		$this->jenkinsUser = $jenkinsUser;
 		$this->jenkinsApiToken = $jenkinsApiToken;
+		
+		$this->jobs = $this->fetchJobs();
+			
+		if (empty($this->jobs))
+		{
+			$this->turnOnYellow();
+			exit('No jobs found');
+		}
+	}
+	
+	/**
+	 * 
+	 */
+	protected function fetchJobs()
+	{
+		$content = json_decode($this->getJenkinsContent($this->jenkinsSource));
+		
+		if (!empty($content->jobs))
+		{
+			return $content->jobs;
+		}
 	}
 	
 	/**
@@ -65,19 +71,9 @@ class Parser
 	 */
 	protected function fetchJobStatuses()
 	{
-		$path = true;
-		foreach($this->jobs as $jobName)
+		foreach($this->jobs as $job)
 		{
-			$result = $this->getJenkinsContent(sprintf(static::URL_PATTERN, $jobName));
-			
-			if (empty($result) || $this->isBuildStatusDefined($result))
-			{
-				// connetcion problems or stuff like that
-				$this->turnOnYellow();
-				return;
-			}
-			
-			if ($this->isSuccessBuild($result) === false)
+			if ($job->color != 'green' && $job->color != 'blue')
 			{
 				// one of the builds is failed
 				$this->turnOnRed();
@@ -92,24 +88,12 @@ class Parser
 	 * Build successfull only if there are no fails in tests.
 	 * 
 	 * @param string $content
-	 * @return bool
+	 * @return boolean
 	 */
 	protected function isSuccessBuild($content)
 	{
-		return !json_decode($content)->failCount;
+		return json_decode($content)->result == 'SUCCESS'; 
 	}
-	
-	/**
-	 * Checks if build status is defined.
-	 * 
-	 * @param string $content
-	 * @return bool 
-	 */
-	protected function isBuildStatusDefined($content)
-	{
-		return isset(json_decode($content)->failCount);
-	}
-		
 	
 	/**
 	 * @param string $url
@@ -125,7 +109,7 @@ class Parser
 		curl_setopt($ch, CURLOPT_COOKIEJAR, "/tmp/jenkins_cookie.txt");
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
 		curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
-		curl_setopt($ch, CURLOPT_USERPWD, $this->jenkinsUser . ':' . static::$this->jenkinsApiToken);
+		curl_setopt($ch, CURLOPT_USERPWD, $this->jenkinsUser . ':' . $this->jenkinsApiToken);
 	
 		$response = curl_exec($ch);
 	
@@ -159,7 +143,7 @@ class Parser
 		
 		// this is not mistake, we turning off yellow when we need it shine.
 		// it's feature of connetcing yellow
-		passthru("sudo ./lights/yellow/off");
+		passthru("sudo ./lights/yellow/on");
 	}
 	
 	/**

@@ -70,10 +70,10 @@ class Parser
 	 * Fetches Jenkin Jobs Statuses. 
 	 */
 	protected function fetchJobStatuses()
-	{
+	{	
 		foreach($this->jobs as $job)
 		{
-			if ($job->color != 'green' && $job->color != 'blue')
+			if ($job->color != 'green' && $job->color != 'blue' && $job->color != 'blue_anime')
 			{
 				// one of the builds is failed
 				$this->turnOnRed();
